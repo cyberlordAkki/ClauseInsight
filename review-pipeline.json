@@ -1,0 +1,83 @@
+{
+  "name": "review-pipeline",
+  "description": "End-to-end ClauseInsight review: classifies the uploaded document, runs the compliance checklist against /knowledge baselines, assigns a risk score, and generates recommendations + open questions.",
+  "start": { "type": "MANUAL" },
+  "nodes": [
+    {
+      "id": "start_review",
+      "type": "FORM",
+      "label": "Start a review",
+      "config": {
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "contract_id": { "type": "string", "description": "UUID of the contracts row to review" },
+            "review_type": {
+              "type": "string",
+              "enum": ["initial", "re_review", "amendment", "renewal"],
+              "default": "initial"
+            },
+            "note": { "type": "string", "description": "Optional reviewer note" }
+          },
+          "required": ["contract_id"]
+        },
+        "ui_schema": { "ui:order": ["contract_id", "review_type", "note"] }
+      }
+    },
+    {
+      "id": "classify",
+      "type": "AGENT",
+      "label": "Classify document & extract key fields",
+      "config": {
+        "agent_name": "document-classifier",
+        "input_mapping": {
+          "contract_id": { "type": "expression", "value": "start_review.contract_id" },
+          "review_type": { "type": "expression", "value": "start_review.review_type" },
+          "note":       { "type": "expression", "value": "start_review.note", "optional": true }
+        }
+      }
+    },
+    {
+      "id": "compliance",
+      "type": "AGENT",
+      "label": "Run compliance checklist & write missing_clauses",
+      "config": {
+        "agent_name": "compliance-agent",
+        "input_mapping": {
+          "contract_id": { "type": "expression", "value": "start_review.contract_id" }
+        }
+      }
+    },
+    {
+      "id": "risk",
+      "type": "AGENT",
+      "label": "Assign risk score & risk_level",
+      "config": {
+        "agent_name": "risk-agent",
+        "input_mapping": {
+          "contract_id": { "type": "expression", "value": "start_review.contract_id" }
+        }
+      }
+    },
+    {
+      "id": "recs",
+      "type": "AGENT",
+      "label": "Generate recommendations & open questions",
+      "config": {
+        "agent_name": "recommendation-agent",
+        "input_mapping": {
+          "contract_id": { "type": "expression", "value": "start_review.contract_id" }
+        }
+      }
+    },
+    { "id": "done", "type": "END", "label": "Review complete" }
+  ],
+  "edges": [
+    { "id": "e1",  "source": "start_review", "target": "classify" },
+    { "id": "e2",  "source": "classify",     "target": "compliance" },
+    { "id": "e3",  "source": "compliance",   "target": "risk" },
+    { "id": "e4",  "source": "risk",         "target": "recs" },
+    { "id": "e5",  "source": "recs",         "target": "done" }
+  ],
+  "visibility": "POD"
+}

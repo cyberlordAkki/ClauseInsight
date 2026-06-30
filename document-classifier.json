@@ -1,0 +1,50 @@
+{
+  "name": "document-classifier",
+  "description": "Reads the uploaded contract/invoice file, classifies doc_type, extracts parties/dates/value/governing law, and persists a structured extraction on the contracts row.",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "contract_id": { "type": "string" },
+      "doc_type": {
+        "type": "string",
+        "enum": ["nda", "vendor_contract", "msa", "sow", "invoice", "employment", "lease", "other", "unknown"]
+      },
+      "parties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "role": { "type": "string" },
+            "jurisdiction": { "type": "string" }
+          },
+          "required": ["name", "role"]
+        }
+      },
+      "counterparty": { "type": "string" },
+      "effective_date": { "type": ["string", "null"] },
+      "term_months": { "type": ["integer", "null"] },
+      "auto_renews": { "type": ["boolean", "null"] },
+      "contract_value": { "type": ["number", "null"] },
+      "currency": { "type": ["string", "null"] },
+      "governing_law": { "type": ["string", "null"] },
+      "jurisdiction": { "type": ["string", "null"] },
+      "language": { "type": "string" },
+      "summary": { "type": "string" },
+      "key_obligations": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "extraction_confidence": { "type": "number" }
+    },
+    "required": ["contract_id", "doc_type", "summary", "language"]
+  },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "contracts",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] },
+    { "resource_type": "folder", "resource_name": "/contracts",
+      "permission_ids": ["folder.read"] }
+  ] }
+}

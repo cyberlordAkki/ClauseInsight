@@ -1,0 +1,54 @@
+{
+  "name": "recommendation-agent",
+  "description": "Generates actionable recommendations (edits, negotiations, process steps) and open questions the team must chase, after compliance + risk review.",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "contract_id": { "type": "string" },
+      "recommendation_rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+            "category": { "type": "string", "enum": ["pricing", "legal", "compliance", "risk", "process", "other"] },
+            "due_at": { "type": "string" }
+          },
+          "required": ["title", "description", "priority", "category"]
+        }
+      },
+      "question_rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "question": { "type": "string" },
+            "context": { "type": "string" },
+            "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] }
+          },
+          "required": ["question", "priority"]
+        }
+      },
+      "summary": { "type": "string" }
+    },
+    "required": ["contract_id", "recommendation_rows", "question_rows"]
+  },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "contracts",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] },
+    { "resource_type": "datastore_table", "resource_name": "missing_clauses",
+      "permission_ids": ["datastore.table.read", "datastore.record.read"] },
+    { "resource_type": "datastore_table", "resource_name": "recommendations",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] },
+    { "resource_type": "datastore_table", "resource_name": "questions",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] },
+    { "resource_type": "folder", "resource_name": "/contracts",
+      "permission_ids": ["folder.read"] },
+    { "resource_type": "folder", "resource_name": "/knowledge",
+      "permission_ids": ["folder.read"] }
+  ] }
+}

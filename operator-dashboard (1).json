@@ -1,0 +1,1102 @@
+/me/operator-dashboard.html  ·  text  ·  1100 lines
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClauseInsight Operator Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f7f6f2;
+        --surface: #ffffff;
+        --ink: #161514;
+        --ink-2: #42403a;
+        --muted: #7a7468;
+        --line: #e6e3da;
+        --line-strong: #c9c4b5;
+        --accent: #c9a227;
+        --accent-soft: #f7ecc7;
+        --good: #4f7a4a;
+        --warn: #c97a2a;
+        --bad: #b14a3b;
+        --crit: #7a1f1f;
+        --info: #4a6680;
+        --shadow: 0 1px 0 rgba(70, 55, 25, .04), 0 6px 24px -8px rgba(70, 55, 25, .08);
+        --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.45;
+        min-height: 100dvh;
+      }
+
+      /* Header */
+      header.topbar {
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        padding: 14px 22px;
+        display: flex; align-items: center; gap: 22px;
+        position: sticky; top: 0; z-index: 10;
+      }
+      header .brand {
+        display: flex; align-items: center; gap: 10px;
+      }
+      header .brand .logo {
+        width: 28px; height: 28px; border-radius: 7px;
+        background: linear-gradient(135deg, var(--accent) 0%, #8a6f1a 100%);
+        display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 14px;
+      }
+      header .brand .name {
+        font-weight: 700; font-size: 15px; letter-spacing: -.01em;
+      }
+      header .brand .name small {
+        font-weight: 400; color: var(--muted); margin-left: 6px; letter-spacing: 0;
+      }
+      header .counters {
+        display: flex; gap: 22px; margin-left: auto; align-items: center;
+      }
+      header .counter {
+        display: flex; flex-direction: column; line-height: 1.1;
+      }
+      header .counter .n {
+        font-family: var(--sans); font-weight: 700; font-size: 18px;
+        font-variant-numeric: tabular-nums;
+      }
+      header .counter .l {
+        font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em;
+        margin-top: 2px; font-weight: 500;
+      }
+      header .counter.critical .n { color: var(--crit); }
+      header .live-dot {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 11.5px; color: var(--muted);
+        padding: 6px 10px; border-radius: 999px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+      }
+      header .live-dot .pip {
+        width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+      }
+      header .live-dot.off .pip { background: var(--bad); }
+
+      /* Tabs */
+      nav.tabs {
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        padding: 0 22px;
+        display: flex; gap: 4px;
+        overflow-x: auto;
+        position: sticky; top: 56px; z-index: 9;
+      }
+      nav.tabs button {
+        font: inherit; background: none; border: none; cursor: pointer;
+        padding: 12px 14px;
+        color: var(--ink-2); font-weight: 500;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        display: flex; align-items: center; gap: 8px;
+      }
+      nav.tabs button:hover { color: var(--ink); }
+      nav.tabs button.active {
+        color: var(--ink); border-bottom-color: var(--accent);
+      }
+      nav.tabs .badge {
+        font-size: 10.5px; font-weight: 600;
+        padding: 2px 6px; border-radius: 999px;
+        background: var(--bg); color: var(--muted);
+        border: 1px solid var(--line);
+        font-variant-numeric: tabular-nums;
+      }
+      nav.tabs button.active .badge { background: var(--accent-soft); color: #715b14; border-color: transparent; }
+
+      /* Main */
+      main {
+        padding: 22px;
+        max-width: 1280px; margin: 0 auto;
+      }
+
+      .panel-empty, .panel-loading {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 40px 24px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .panel-loading .skeleton {
+        height: 12px; border-radius: 4px; background: var(--line);
+        margin: 10px auto; width: 70%;
+      }
+
+      /* Risk distribution */
+      .risk-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+      }
+      @media (max-width: 920px) { .risk-grid { grid-template-columns: 1fr; } }
+      .surface {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px 20px;
+      }
+      .surface h3 {
+        margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+        color: var(--muted); font-weight: 600;
+      }
+      .surface .big {
+        font-size: 36px; font-weight: 700; line-height: 1;
+        font-variant-numeric: tabular-nums;
+        margin: 4px 0 6px;
+      }
+      .surface .sub {
+        color: var(--muted); font-size: 12.5px;
+      }
+      .bars { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+      .bar { display: grid; grid-template-columns: 90px 1fr 60px; align-items: center; gap: 12px; }
+      .bar .lab {
+        font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
+        color: var(--ink-2);
+      }
+      .bar .track {
+        height: 12px; background: var(--bg); border-radius: 6px; overflow: hidden;
+        border: 1px solid var(--line);
+      }
+      .bar .fill {
+        height: 100%;
+      }
+      .bar .num {
+        font-family: var(--mono); font-size: 12.5px;
+        font-variant-numeric: tabular-nums; text-align: right;
+      }
+
+      /* Generic table */
+      .table-wrap {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      table.ci {
+        width: 100%; border-collapse: collapse;
+        font-size: 13px;
+      }
+      table.ci thead th {
+        background: var(--bg);
+        text-align: left; font-weight: 600; font-size: 11.5px;
+        text-transform: uppercase; letter-spacing: .08em;
+        color: var(--muted);
+        padding: 10px 14px; border-bottom: 1px solid var(--line);
+        position: sticky; top: 0;
+      }
+      table.ci tbody td {
+        padding: 12px 14px; border-bottom: 1px solid var(--line);
+        font-variant-numeric: tabular-nums;
+        vertical-align: middle;
+      }
+      table.ci tbody tr:last-child td { border-bottom: none; }
+      table.ci tbody tr:hover { background: rgba(201, 162, 39, 0.04); }
+
+      .pill {
+        display: inline-block; padding: 3px 9px; border-radius: 999px;
+        font-size: 11px; font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        text-transform: uppercase; letter-spacing: .04em;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+      .pill.status-uploaded     { background: #eee9d9; color: var(--ink-2); }
+      .pill.status-classifying  { background: #efe7d2; color: #715b14; border-color: #d8c98a; }
+      .pill.status-reviewing    { background: #cfe1c8; color: #2f5829; }
+      .pill.status-awaiting_review { background: var(--accent-soft); color: #715b14; }
+      .pill.status-completed    { background: #d4e0d0; color: #2f5829; }
+      .pill.status-failed       { background: #f4d4d0; color: var(--crit); }
+
+      .pill.doc-nda { background: #e8eaf5; color: #2a3460; }
+      .pill.doc-vendor_contract { background: #e7e1f5; color: #463167; }
+      .pill.doc-msa { background: #e0eaf5; color: #244666; }
+      .pill.doc-sow { background: #e2f1ee; color: #1f5450; }
+      .pill.doc-invoice { background: #fce9c8; color: #6a5018; }
+      .pill.doc-unknown { background: #ece9de; color: var(--muted); }
+
+      .pill.risk-low { background: #d8e6cf; color: #2f5829; border-color: #bcd0a8; }
+      .pill.risk-medium { background: #f6e1b5; color: #6a5018; border-color: #e7c97c; }
+      .pill.risk-high { background: #f4cab7; color: #883817; border-color: #e3a07d; }
+      .pill.risk-critical { background: #d8a7a1; color: var(--crit); border-color: #b97b73; }
+
+      .pill.sev-info { background: #ecedf0; color: var(--muted); }
+      .pill.sev-low { background: #dbe8f3; color: var(--info); }
+      .pill.sev-medium { background: #f6e1b5; color: #6a5018; }
+      .pill.sev-high { background: #f4cab7; color: #883817; }
+      .pill.sev-critical { background: #d8a7a1; color: var(--crit); }
+
+      .pill.prio-low { background: #ecedf0; color: var(--muted); }
+      .pill.prio-medium { background: #f6e1b5; color: #6a5018; }
+      .pill.prio-high { background: #f4cab7; color: #883817; }
+      .pill.prio-urgent { background: #d8a7a1; color: var(--crit); }
+
+      .num { font-family: var(--mono); font-size: 12.5px; }
+
+      .filter-row {
+        display: flex; gap: 8px; align-items: center;
+        padding: 10px 14px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .filter-row label {
+        font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+        font-weight: 600;
+      }
+      .filter-row select, .filter-row input {
+        font: inherit; font-size: 12.5px;
+        border: 1px solid var(--line-strong); background: var(--surface);
+        padding: 4px 8px; border-radius: 6px; color: var(--ink);
+      }
+
+      .m-title { font-weight: 600; }
+      .m-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+      .small { font-size: 12px; color: var(--muted); }
+
+      .err {
+        background: #f4d4d0; color: var(--crit);
+        padding: 12px 14px; border-radius: 10px; font-size: 13px;
+      }
+      .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+      .toolbar button {
+        font: inherit; font-size: 12.5px;
+        padding: 6px 12px; background: var(--surface); border: 1px solid var(--line-strong);
+        border-radius: 6px; cursor: pointer; color: var(--ink);
+      }
+      .toolbar button:hover { background: var(--bg); }
+    
+/* Intake tab */
+.intake-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 980px) { .intake-grid { grid-template-columns: 1fr; } }
+.dropzone {
+  background: var(--surface);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 14px;
+  padding: 28px 24px;
+  text-align: center;
+  transition: border-color .15s, background .15s;
+  cursor: pointer;
+}
+.dropzone:hover, .dropzone.drag {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.dropzone .ico {
+  width: 44px; height: 44px; margin: 0 auto 10px;
+  display: grid; place-items: center;
+  border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--line);
+  font-weight: 700; color: var(--accent);
+}
+.dropzone .t { font-size: 14px; font-weight: 600; }
+.dropzone .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.dropzone .hint { color: var(--muted); font-size: 11px; margin-top: 10px; }
+.dropzone input[type=file] { display: none; }
+.dropzone .progress {
+  display: none; align-items: center; gap: 8px; margin-top: 14px;
+  font-size: 12.5px; color: var(--ink-2);
+}
+.dropzone .progress.show { display: flex; }
+.dropzone .progress .bar {
+  flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden;
+  border: 1px solid var(--line);
+}
+.dropzone .progress .fill {
+  display: block; height: 100%; background: var(--accent); width: 0%;
+  transition: width .3s;
+}
+.intake-row {
+  display: flex; gap: 12px; align-items: center;
+  padding: 12px 14px; border-bottom: 1px solid var(--line);
+}
+.intake-row:last-child { border-bottom: none; }
+.intake-row .name { font-weight: 600; font-size: 13px; }
+.intake-row .meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.intake-row .ico {
+  width: 36px; height: 44px; border-radius: 4px;
+  background: linear-gradient(180deg,#f8e7c8,#ebd0a4);
+  display: grid; place-items: center; color: #6a5018;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  flex-shrink: 0;
+}
+.intake-row .actions { margin-left: auto; display: flex; gap: 6px; }
+.intake-row .btn {
+  font: inherit; font-size: 12px; font-weight: 600;
+  padding: 5px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+}
+.intake-row .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+.intake-row .btn.primary:hover { background: #b08d1f; }
+.intake-row .btn[disabled] { opacity: .5; cursor: not-allowed; }
+.intake-row .pulse {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--ink-2);
+}
+.intake-row .pulse .pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--warn); animation: bump 1.2s infinite ease-in-out;
+}
+.intake-row .pulse.done .pip { background: var(--good); animation: none; }
+@keyframes bump { 0%,100% { transform: scale(1); opacity: .5; } 50% { transform: scale(1.4); opacity: 1; } }
+.surface.compact { padding: 14px 16px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 12.5px; }
+.kv .k { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; font-size: 11px; }
+.kv .v { color: var(--ink); }
+.kicker {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); font-weight: 600; margin-bottom: 8px;
+}
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div class="name">
+          ClauseInsight <small>· Operator Dashboard</small>
+        </div>
+      </div>
+      <div class="counters">
+        <div class="counter"><div class="n" id="ctr-total">—</div><div class="l">Contracts</div></div>
+        <div class="counter"><div class="n" id="ctr-pending">—</div><div class="l">Pending</div></div>
+        <div class="counter"><div class="n" id="ctr-awaiting">—</div><div class="l">Awaiting</div></div>
+        <div class="counter critical"><div class="n" id="ctr-critical">—</div><div class="l">Critical</div></div>
+        <div class="live-dot" id="live">
+          <span class="pip"></span><span id="live-label">connecting…</span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <button data-tab="intake">Intake<span class="badge" id="b-intake">0</span></button>
+      <button data-tab="contracts" class="active">Contracts<span class="badge" id="b-contracts">0</span></button>
+      <button data-tab="risk">Risk Distribution</button>
+      <button data-tab="clauses">Missing Clauses<span class="badge" id="b-clauses">0</span></button>
+      <button data-tab="recs">Recommendations<span class="badge" id="b-recs">0</span></button>
+      <button data-tab="history">Review History<span class="badge" id="b-history">0</span></button>
+    </nav>
+
+    <main>
+      <!-- ============ TAB: Intake ============ -->
+      <section data-pane="intake">
+        <div class="intake-grid">
+          <div class="column">
+            <label class="dropzone" id="dz">
+              <input type="file" id="dz-input" accept="application/pdf,.pdf" />
+              <div class="ico">PDF</div>
+              <div class="t">Drop a contract PDF, or click to browse</div>
+              <div class="sub">Stored as a <code>contracts</code> row · the <code>review-pipeline</code> workflow runs on it · results land on this dashboard automatically.</div>
+              <div class="hint">PDF only · tracked under /me/contracts</div>
+              <div class="progress" id="dz-prog"><span id="dz-prog-label">Working…</span>
+                <div class="bar"><div class="fill" id="dz-prog-fill"></div></div>
+                <span id="dz-prog-pct">0%</span>
+              </div>
+            </label>
+
+            <div class="surface compact" style="margin-top:14px;">
+              <div class="kicker">Recent uploads</div>
+              <div id="intake-list"><div class="small" style="padding:6px 0;">Nothing uploaded yet.</div></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="surface compact">
+              <div class="kicker">How the pipeline runs</div>
+              <div class="kv">
+                <div class="k">1. Upload</div><div class="v">PDF stored at <code>/me/contracts/&lt;name&gt;.pdf</code></div>
+                <div class="k">2. Register</div><div class="v">A <code>contracts</code> row is created with <code>status=uploaded</code></div>
+                <div class="k">3. Classify</div><div class="v"><code>document-classifier</code> → doc_type, parties, dates</div>
+                <div class="k">4. Compliance</div><div class="v"><code>compliance-agent</code> → missing_clauses</div>
+                <div class="k">5. Risk</div><div class="v"><code>risk-agent</code> → risk_score, risk_level</div>
+                <div class="k">6. Recs</div><div class="v"><code>recommendation-agent</code> → recommendations + open questions</div>
+                <div class="k">7. Review</div><div class="v">A <code>reviews</code> row is written; <code>contract.status</code> → awaiting_review → completed</div>
+              </div>
+              <div class="small" style="margin-top:10px;">The dashboard's live-watch on the 4 tables picks up every step — no refresh needed.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+            <!-- ============ TAB: Contracts ============ -->
+      <section data-pane="contracts">
+        <div class="toolbar">
+          <label class="small">Filter status:</label>
+          <select id="f-status">
+            <option value="">All</option>
+            <option value="uploaded">Uploaded</option>
+            <option value="classifying">Classifying</option>
+            <option value="reviewing">Reviewing</option>
+            <option value="awaiting_review">Awaiting review</option>
+            <option value="completed">Completed</option>
+          </select>
+          <label class="small">Risk:</label>
+          <select id="f-risk">
+            <option value="">All</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <span class="small" id="contracts-note"></span>
+        </div>
+        <div class="table-wrap"><table class="ci" id="t-contracts"></table></div>
+      </section>
+
+      <!-- ============ TAB: Risk Distribution ============ -->
+      <section data-pane="risk" hidden>
+        <div class="risk-grid">
+          <div class="surface">
+            <h3>Average Risk Score</h3>
+            <div class="big" id="kpi-risk">—</div>
+            <div class="sub">0 = safe · 100 = extreme risk</div>
+            <div class="bars" id="risk-bars"></div>
+          </div>
+          <div class="surface">
+            <h3>Average Compliance Score</h3>
+            <div class="big" id="kpi-compliance">—</div>
+            <div class="sub">From the compliance-agent checklist pass-rate</div>
+            <div class="bars" id="compliance-bars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TAB: Missing Clauses ============ -->
+      <section data-pane="clauses" hidden>
+        <div class="toolbar">
+          <label class="small">Severity:</label>
+          <select id="f-sev">
+            <option value="">All</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+            <option value="info">Info</option>
+          </select>
+          <span class="small" id="clauses-note"></span>
+        </div>
+        <div class="table-wrap"><table class="ci" id="t-clauses"></table></div>
+      </section>
+
+      <!-- ============ TAB: Recommendations ============ -->
+      <section data-pane="recs" hidden>
+        <div class="toolbar">
+          <label class="small">Priority:</label>
+          <select id="f-prio">
+            <option value="">All</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <span class="small" id="recs-note"></span>
+        </div>
+        <div class="table-wrap"><table class="ci" id="t-recs"></table></div>
+      </section>
+
+      <!-- ============ TAB: Review History ============ -->
+      <section data-pane="history" hidden>
+        <div class="table-wrap"><table class="ci" id="t-history"></table></div>
+      </section>
+    </main>
+
+    <script>
+      // Load SDK from the API origin (host injects window.__LEMMA_CONFIG__).
+      (function () {
+        var cfg = window.__LEMMA_CONFIG__ || {};
+        var base = (cfg.apiUrl || window.location.origin).replace(/\/$/, "");
+        var s = document.createElement("script");
+        s.src = base + "/public/sdk/lemma-client.js";
+        s.onload = boot;
+        s.onerror = function () {
+          document.querySelector("main").innerHTML =
+            '<div class="err">Could not load the Lemma client SDK from ' + s.src + '.</div>';
+        };
+        document.head.appendChild(s);
+      })();
+
+      // ------------------ State ------------------
+      const state = {
+        contracts: new Map(),       // id -> row
+        missing_clauses: new Map(), // id -> row
+        recommendations: new Map(), // id -> row
+        reviews: new Map(),         // id -> row
+        contractTitleById: new Map(),
+        // Intake (initialized so .values() / .set() / .size / .entries() never throw on first boot).
+        intakeRuns: new Map(),      // contract_id -> { run_id, status, started_at, file_path, kind }
+        intakeFileMeta: new Map(),  // file_path -> { name, contract_id, run_id, stage, started_at }
+        intakeBusy: false,          // single-flight upload lock
+        intakeHeartbeat: null,      // setInterval handle for run-status polling (Intake tab only)
+        liveSubs: [],
+        activeTab: "contracts",
+        filters: { status: "", risk: "", sev: "", prio: "" },
+      };
+
+      let client = null;
+
+      async function boot() {
+        try {
+          client = new window.LemmaClient.LemmaClient(); // no args: pod config injected
+          const init = await client.initialize();
+          if (init.status !== "authenticated") {
+            client.auth.redirectToAuth();
+            return;
+          }
+          wireUI();
+          await loadAll();
+          subscribeLive();
+          renderAll();
+        } catch (e) {
+          document.querySelector("main").innerHTML =
+            '<div class="err">Init failed: ' + (e?.message || e) + '</div>';
+        }
+      }
+
+      // ------------------ Wiring ------------------
+      function wireUI() {
+        document.querySelectorAll("nav.tabs button").forEach((b) => {
+          b.addEventListener("click", () => switchTab(b.dataset.tab));
+        });
+        ["status","risk","sev","prio"].forEach((k) => {
+          const el = document.getElementById("f-" + k);
+          if (el) el.addEventListener("change", (e) => {
+            state.filters[k] = e.target.value;
+            renderAll();
+          });
+        });
+        // tab switch
+        function switchTab(name) {
+          state.activeTab = name;
+          document.querySelectorAll("nav.tabs button").forEach((b) => {
+            b.classList.toggle("active", b.dataset.tab === name);
+          });
+          document.querySelectorAll("section[data-pane]").forEach((s) => {
+            s.hidden = s.dataset.pane !== name;
+          });
+          if (name === "intake") renderIntake();
+        }
+        wireIntake();
+      }
+
+      // ------------------ Data Load ------------------
+      async function loadAll() {
+        const results = await Promise.all([
+          client.records.list("contracts",       { limit: 200 }),
+          client.records.list("missing_clauses", { limit: 500 }),
+          client.records.list("recommendations", { limit: 200 }),
+          client.records.list("reviews",         { limit: 200 }),
+        ]);
+        results.forEach((r, i) => {
+          const key = ["contracts", "missing_clauses", "recommendations", "reviews"][i];
+          (r.items || []).forEach((row) => state[key].set(row.id, row));
+        });
+        state.contracts.forEach((c) => state.contractTitleById.set(c.id, c.title || "(untitled)"));
+        updateBadges();
+      }
+
+      // ------------------ Live Stream ------------------
+      function subscribeLive() {
+        const subs = {
+          contracts:       (op, id, payload) => applyChange("contracts", op, id, payload, "contracts"),
+          missing_clauses: (op, id, payload) => applyChange("missing_clauses", op, id, payload, "missing_clauses"),
+          recommendations: (op, id, payload) => applyChange("recommendations", op, id, payload, "recommendations"),
+          reviews:         (op, id, payload) => applyChange("reviews", op, id, payload, "reviews"),
+        };
+        let connectedCount = 0;
+        Object.entries(subs).forEach(([table, handler]) => {
+          const h = client.datastore.watchChanges({
+            table,
+            onChange: (evt) => {
+              handler(evt.operation || evt.type, evt.record_id, evt.payload);
+              renderAll();
+            },
+          });
+          // h may be a Promise resolving to { close } — handle both shapes
+          Promise.resolve(h).then((resolved) => {
+            connectedCount++;
+            state.liveSubs.push(typeof resolved?.close === "function" ? resolved : h);
+            setLiveDot(true);
+          }).catch(() => {});
+        });
+        // Fallback: if no stream is confirmed in 4s, show "off" but keep data.
+        setTimeout(() => { if (connectedCount === 0) setLiveDot(false); }, 4000);
+      }
+
+      function setLiveDot(ok) {
+        const el = document.getElementById("live");
+        el.classList.toggle("off", !ok);
+        el.querySelector("#live-label").textContent = ok ? "live" : "offline";
+      }
+
+      function applyChange(key, op, id, payload, _table) {
+        if (op === "delete") {
+          state[key].delete(id);
+          if (key === "contracts") state.contractTitleById.delete(id);
+          return;
+        }
+        if (!id) return;
+        const prev = state[key].get(id) || {};
+        const row = { ...prev, ...(payload || {}), id };
+        state[key].set(id, row);
+        if (key === "contracts") state.contractTitleById.set(id, row.title || "(untitled)");
+        updateBadges();
+      }
+
+      // ------------------ Render ------------------
+      function renderAll() {
+        renderTop();
+        renderContracts();
+        renderRisk();
+        renderClauses();
+        renderRecs();
+        renderHistory();
+        renderIntake();
+        updateBadges();
+      }
+
+      function renderTop() {
+        const all = [...state.contracts.values()];
+        const total = all.length;
+        const pending = all.filter(c => c.status === "classifying" || c.status === "reviewing").length;
+        const awaiting = all.filter(c => c.status === "awaiting_review").length;
+        const critical = all.filter(c => c.risk_level === "critical").length;
+        document.getElementById("ctr-total").textContent = total;
+        document.getElementById("ctr-pending").textContent = pending;
+        document.getElementById("ctr-awaiting").textContent = awaiting;
+        document.getElementById("ctr-critical").textContent = critical;
+      }
+
+      function updateBadges() {
+        document.getElementById("b-contracts").textContent = state.contracts.size;
+        document.getElementById("b-clauses").textContent = state.missing_clauses.size;
+        document.getElementById("b-recs").textContent =
+          [...state.recommendations.values()].filter(r => r.status !== "completed" && r.status !== "rejected").length;
+        document.getElementById("b-history").textContent = state.reviews.size;
+        const inflight = [...state.contracts.values()].filter((c) =>
+          c.status === "uploaded" || c.status === "classifying" || c.status === "reviewing"
+        ).length;
+        const b = document.getElementById("b-intake");
+        if (b) b.textContent = inflight;
+      }
+
+      // ------------------ Intake: wire drop-zone + click + drag/drop ------------------
+      function wireIntake() {
+        const dz = document.getElementById("dz");
+        const input = document.getElementById("dz-input");
+        if (!dz || !input) return;
+        dz.addEventListener("click", (e) => { if (e.target.tagName !== "INPUT") input.click(); });
+        dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("drag"); });
+        dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+        dz.addEventListener("drop", (e) => {
+          e.preventDefault(); dz.classList.remove("drag");
+          const files = [...(e.dataTransfer?.files || [])];
+          for (const f of files) handlePickedFile(f);
+        });
+        input.addEventListener("change", () => {
+          const files = [...input.files];
+          for (const f of files) handlePickedFile(f);
+          input.value = "";
+        });
+      }
+
+      // ------------------ Intake: file -> upload -> row -> workflow ------------------
+      async function handlePickedFile(file) {
+        if (state.intakeBusy) { toast("Another upload is in progress — queued.", "warn"); return; }
+        if (!file || (!file.type?.includes("pdf") && !file.name?.toLowerCase().endsWith(".pdf"))) {
+          toast("Only PDF files are accepted.", "bad"); return;
+        }
+        state.intakeBusy = true;
+        progOpen("Uploading " + file.name);
+        try {
+          const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+          const remotePath = "/me/contracts/" + safeName;
+          // 1) Upload to pod
+          progSet("Uploading " + file.name + "…", 25);
+          const uploaded = await client.files.upload(file, {
+            name: safeName,
+            directoryPath: "/me/contracts",
+            searchEnabled: true,
+          });
+          const file_path = uploaded.path || remotePath;
+          // 2) Create a contracts row
+          progSet("Registering contract row…", 60);
+          const created = await client.records.create("contracts", {
+            title: file.name.replace(/\.pdf$/i, ""),
+            file_path, doc_type: "unknown", status: "uploaded",
+            summary: "Awaiting pipeline…",
+          });
+          // 3) Kick workflow
+          progSet("Starting review pipeline…", 85);
+          await startReviewPipeline(created.id, file_path);
+          progSet("Done — switch to Contracts to track progress.", 100);
+          toast("Uploaded · review pipeline started.", "good");
+          renderIntake();
+        } catch (e) {
+          console.error(e);
+          toast("Upload failed: " + (e?.message || e), "bad");
+        } finally {
+          state.intakeBusy = false;
+          setTimeout(progClose, 1500);
+        }
+      }
+
+      async function startReviewPipeline(contract_id, file_path) {
+        const inputs = { contract_id, review_type: "initial" };
+        const created = await client.workflows.runs.create("review-pipeline");
+        if (!created?.id) throw new Error("workflow.runCreate returned no run id");
+        const nodeId = created.active_wait?.node_id || "start_review";
+        await client.workflows.runs.submitForm(created.id, { node_id: nodeId, inputs });
+        state.intakeRuns.set(contract_id, {
+          run_id: created.id, status: "running", started_at: new Date().toISOString(), file_path,
+        });
+        state.intakeFileMeta.set(file_path, {
+          name: file_path.split("/").pop(), contract_id, run_id: created.id, stage: "classifying",
+        });
+        return created;
+      }
+
+      async function pollIntakeRuns() {
+        const due = (state.intakeRuns instanceof Map)
+          ? [...state.intakeRuns.entries()].filter(([, r]) => r.status === "running")
+          : [];
+        for (const [contract_id, info] of due) {
+          try {
+            const run = await client.workflows.runs.get(info.run_id);
+            const s = run?.status || "running";
+            state.intakeRuns.set(contract_id, { ...info, status: s });
+            const fm = state.intakeFileMeta.get(info.file_path);
+            if (fm) {
+              fm.stage = s === "succeeded" ? "done" :
+                          (s === "failed" || s === "cancelled") ? "failed" : fm.stage;
+              state.intakeFileMeta.set(info.file_path, fm);
+            }
+          } catch (e) { /* keep last state */ }
+        }
+      }
+
+      function renderIntake() {
+        const root = document.getElementById("intake-list");
+        if (!root) return;
+        // Defensive: if state.intakeFileMeta was ever unset, render an empty list instead of crashing boot.
+        const fileMetas = (state.intakeFileMeta && typeof state.intakeFileMeta.values === "function")
+          ? [...state.intakeFileMeta.values()]
+          : [];
+        const localEntries = fileMetas
+          .sort((a, b) => (b.started_at || "").localeCompare(a.started_at || ""));
+        if (localEntries.length === 0) {
+          root.innerHTML = '<div class="small" style="padding:6px 0;">Nothing uploaded yet — drop a PDF above to begin.</div>';
+        } else {
+          root.innerHTML = localEntries.map(rowIntakeHTML).join("");
+          root.querySelectorAll("[data-action='view']").forEach((b) => b.addEventListener("click", (e) => {
+            const c = state.contracts.get(e.currentTarget.dataset.cid);
+            if (c) switchTab("contracts");
+          }));
+          root.querySelectorAll("[data-action='rerun']").forEach((b) => b.addEventListener("click", (e) => {
+            const cid = e.currentTarget.dataset.cid;
+            handleRerun(cid);
+          }));
+        }
+      }
+
+      function rowIntakeHTML(m) {
+        const c = state.contracts.get(m.contract_id);
+        const status = c?.status || m.stage || "uploaded";
+        const stage = m.stage || status;
+        const isDone = stage === "done" || status === "completed" || status === "awaiting_review";
+        const isBad  = stage === "failed" || status === "failed";
+        const pulseClass = isDone ? "done" : isBad ? "" : "";
+        const pulseText  = isDone ? "complete" : isBad ? "failed" : "running…";
+        return `<div class="intake-row">
+          <div class="ico">PDF</div>
+          <div class="info">
+            <div class="name">${escapeHTML(m.name)}</div>
+            <div class="meta">${escapeHTML(c?.title || m.contract_id.slice(0,8))} · <span class="pill status-${status}">${escapeHTML((status || '').replaceAll('_',' '))}</span></div>
+          </div>
+          <div class="actions">
+            <span class="pulse ${pulseClass}"><span class="pip"></span>${escapeHTML(pulseText)}</span>
+            <button class="btn" data-action="view" data-cid="${m.contract_id}">Contracts</button>
+            <button class="btn primary" data-action="rerun" data-cid="${m.contract_id}">Re-run review</button>
+          </div>
+        </div>`;
+      }
+
+      function stageLabel(s) {
+        return ({ classifying: "Classifying", reviewing: "Reviewing", awaiting_review: "Awaiting review",
+                  completed: "Complete", failed: "Failed", uploaded: "In intake", done: "Complete" })[s] || s;
+      }
+
+      async function handleRerun(contract_id) {
+        if (state.intakeBusy) { toast("Another upload is in progress — try later.", "warn"); return; }
+        state.intakeBusy = true;
+        try {
+          const c = state.contracts.get(contract_id);
+          await startReviewPipeline(contract_id, c?.file_path || "");
+          renderIntake();
+          toast("Re-running review pipeline…", "good");
+        } catch (e) {
+          toast("Re-run failed: " + (e?.message || e), "bad");
+        } finally { state.intakeBusy = false; }
+      }
+
+      function progOpen(label) {
+        const wrap = document.getElementById("dz-prog");
+        if (!wrap) return null;
+        wrap.classList.add("show");
+        document.getElementById("dz-prog-label").textContent = label;
+        const fill = document.getElementById("dz-prog-fill");
+        const pct  = document.getElementById("dz-prog-pct");
+        fill.style.width = "0%"; pct.textContent = "0%";
+      }
+      function progSet(label, pct) {
+        const e = document.getElementById("dz-prog");
+        if (!e || !e.classList.contains("show")) return;
+        document.getElementById("dz-prog-label").textContent = label;
+        document.getElementById("dz-prog-fill").style.width = Math.max(0, Math.min(100, pct)) + "%";
+        document.getElementById("dz-prog-pct").textContent = Math.round(pct) + "%";
+      }
+      function progClose() {
+        const e = document.getElementById("dz-prog");
+        if (e) e.classList.remove("show");
+      }
+      function toast(message, kind) {
+        const el = document.getElementById("live");
+        if (!el) return;
+        const prev = el.querySelector("#live-label").textContent;
+        const prevOff = el.classList.contains("off");
+        el.classList.toggle("off", kind === "bad");
+        document.getElementById("live-label").textContent = message.slice(0, 80);
+        setTimeout(() => {
+          document.getElementById("live-label").textContent = prev;
+          el.classList.toggle("off", prevOff);
+        }, 3500);
+      }
+
+      // Poll running workflow runs every 4s so the Intake list reflects completion.
+      setInterval(() => {
+        if (!(state.intakeRuns instanceof Map) || state.intakeRuns.size === 0) return;
+        pollIntakeRuns().then(() => renderIntake());
+      }, 4000);
+
+      // ----- Contracts -----
+      function renderContracts() {
+        const tbl = document.getElementById("t-contracts");
+        const rows = [...state.contracts.values()]
+          .filter(c => !state.filters.status || c.status === state.filters.status)
+          .filter(c => !state.filters.risk || c.risk_level === state.filters.risk)
+          .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+        document.getElementById("contracts-note").textContent =
+          rows.length + " of " + state.contracts.size + " contracts shown";
+
+        tbl.innerHTML = `
+          <thead><tr>
+            <th>Title</th><th>Doc type</th><th>Counterparty</th>
+            <th>Status</th><th>Risk</th><th>Compliance</th>
+            <th>Value</th><th>Updated</th>
+          </tr></thead>
+          <tbody>${rows.length === 0 ? emptyRow(6) : rows.map(rowContractHTML).join("")}</tbody>
+        `;
+      }
+      function rowContractHTML(c) {
+        return `<tr>
+          <td><div class="m-title">${escapeHTML(c.title)}</div>
+              <div class="m-sub">${escapeHTML(c.summary || "—")}</div></td>
+          <td><span class="pill doc-${c.doc_type || "unknown"}">${escapeHTML(c.doc_type || "unknown")}</span></td>
+          <td>${escapeHTML(c.counterparty || "—")}</td>
+          <td><span class="pill status-${c.status}">${escapeHTML((c.status || "").replaceAll("_"," "))}</span></td>
+          <td>${c.risk_level ? `<span class="pill risk-${c.risk_level}">${c.risk_level}</span>` : "—"}
+              ${c.risk_score != null ? `<span class="num small"> ${c.risk_score.toFixed?.(0) ?? c.risk_score}</span>` : ""}</td>
+          <td>${c.compliance_score != null ? `<span class="num">${c.compliance_score.toFixed?.(0) ?? c.compliance_score}</span>` : "—"}</td>
+          <td>${c.contract_value != null ? `<span class="num">${formatCurrency(c.contract_value, c.currency)}</span>` : "—"}</td>
+          <td><span class="num small">${c.updated_at ? formatDate(c.updated_at) : "—"}</span></td>
+        </tr>`;
+      }
+
+      // ----- Risk distribution -----
+      function renderRisk() {
+        const all = [...state.contracts.values()];
+        const withRisk = all.filter(c => c.risk_score != null);
+        const riskAvg = withRisk.length
+          ? (withRisk.reduce((s, c) => s + (c.risk_score || 0), 0) / withRisk.length)
+          : null;
+        const withComp = all.filter(c => c.compliance_score != null);
+        const compAvg = withComp.length
+          ? (withComp.reduce((s, c) => s + (c.compliance_score || 0), 0) / withComp.length)
+          : null;
+        document.getElementById("kpi-risk").textContent = riskAvg == null ? "—" : riskAvg.toFixed(0);
+        document.getElementById("kpi-compliance").textContent = compAvg == null ? "—" : compAvg.toFixed(0);
+
+        // Risk level buckets
+        const counts = { low: 0, medium: 0, high: 0, critical: 0 };
+        all.forEach((c) => { if (c.risk_level in counts) counts[c.risk_level]++; });
+        const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+        const colors = { low: "var(--good)", medium: "var(--warn)", high: "#cc6a3a", critical: "var(--crit)" };
+        document.getElementById("risk-bars").innerHTML = ["low","medium","high","critical"].map((k) => {
+          const pct = Math.round((counts[k] / total) * 100);
+          return `<div class="bar">
+            <div class="lab">${k}</div>
+            <div class="track"><div class="fill" style="width:${pct}%; background:${colors[k]}"></div></div>
+            <div class="num">${counts[k]}</div>
+          </div>`;
+        }).join("");
+
+        // Compliance buckets (info: <50, weak: 50-74, ok: 75-89, strong: 90+)
+        const cb = { strong: 0, ok: 0, weak: 0, poor: 0 };
+        all.forEach((c) => {
+          if (c.compliance_score == null) return;
+          if (c.compliance_score >= 90) cb.strong++;
+          else if (c.compliance_score >= 75) cb.ok++;
+          else if (c.compliance_score >= 50) cb.weak++;
+          else cb.poor++;
+        });
+        const ctotal = (cb.strong + cb.ok + cb.weak + cb.poor) || 1;
+        const cc = { strong: "var(--good)", ok: "#7e9b5a", weak: "var(--warn)", poor: "var(--crit)" };
+        document.getElementById("compliance-bars").innerHTML = ["strong","ok","weak","poor"].map((k) => {
+          const pct = Math.round((cb[k] / ctotal) * 100);
+          return `<div class="bar">
+            <div class="lab">${k}</div>
+            <div class="track"><div class="fill" style="width:${pct}%; background:${cc[k]}"></div></div>
+            <div class="num">${cb[k]}</div>
+          </div>`;
+        }).join("");
+      }
+
+      // ----- Missing Clauses -----
+      function renderClauses() {
+        const tbl = document.getElementById("t-clauses");
+        const rows = [...state.missing_clauses.values()]
+          .filter(c => !state.filters.sev || c.severity === state.filters.sev)
+          .sort((a, b) => severityOrder(b.severity) - severityOrder(a.severity));
+        document.getElementById("clauses-note").textContent =
+          rows.length + " of " + state.missing_clauses.size + " missing clauses";
+        tbl.innerHTML = `
+          <thead><tr>
+            <th>Contract</th><th>Clause</th><th>Category</th><th>Severity</th>
+            <th>Why required</th><th>Status</th>
+          </tr></thead>
+          <tbody>${rows.length === 0 ? emptyRow(6) : rows.map(rowClauseHTML).join("")}</tbody>
+        `;
+      }
+      function rowClauseHTML(c) {
+        const title = state.contractTitleById.get(c.contract_id) || "(unknown contract)";
+        return `<tr>
+          <td><div class="m-title">${escapeHTML(title)}</div>
+              <div class="m-sub num">${escapeHTML(c.contract_id?.slice(0,8) || "")}</div></td>
+          <td><div class="m-title">${escapeHTML(c.clause_name)}</div>
+              <div class="m-sub">${escapeHTML(c.description || "—")}</div></td>
+          <td><span class="small">${escapeHTML(c.category || "—")}</span></td>
+          <td><span class="pill sev-${c.severity}">${c.severity}</span></td>
+          <td><div class="small">${escapeHTML(c.why_required || "—")}</div></td>
+          <td><span class="small">${escapeHTML(c.status || "open")}</span></td>
+        </tr>`;
+      }
+
+      // ----- Recommendations -----
+      function renderRecs() {
+        const tbl = document.getElementById("t-recs");
+        const rows = [...state.recommendations.values()]
+          .filter(r => !state.filters.prio || r.priority === state.filters.prio)
+          .sort((a, b) => priorityOrder(b.priority) - priorityOrder(a.priority));
+        document.getElementById("recs-note").textContent =
+          rows.length + " of " + state.recommendations.size + " recommendations";
+        tbl.innerHTML = `
+          <thead><tr>
+            <th>Title</th><th>Contract</th>
+            <th>Priority</th><th>Category</th>
+            <th>Due</th><th>Status</th>
+          </tr></thead>
+          <tbody>${rows.length === 0 ? emptyRow(6) : rows.map(rowRecHTML).join("")}</tbody>
+        `;
+      }
+      function rowRecHTML(r) {
+        return `<tr>
+          <td><div class="m-title">${escapeHTML(r.title)}</div>
+              <div class="m-sub">${escapeHTML(r.description || "—")}</div></td>
+          <td><div class="m-title">${escapeHTML(state.contractTitleById.get(r.contract_id) || "(unknown)")}</div>
+              <div class="m-sub num">${escapeHTML(r.contract_id?.slice(0,8) || "")}</div></td>
+          <td><span class="pill prio-${r.priority}">${r.priority}</span></td>
+          <td><span class="small">${escapeHTML(r.category || "—")}</span></td>
+          <td><span class="num small">${r.due_at ? formatDate(r.due_at) : "—"}</span></td>
+          <td><span class="small">${escapeHTML(r.status || "open")}</span></td>
+        </tr>`;
+      }
+
+      // ----- Review History -----
+      function renderHistory() {
+        const tbl = document.getElementById("t-history");
+        const rows = [...state.reviews.values()]
+          .sort((a, b) => (b.completed_at || b.created_at || "").localeCompare(a.completed_at || a.created_at || ""));
+        tbl.innerHTML = `
+          <thead><tr>
+            <th>Completed</th><th>Contract</th>
+            <th>Type</th><th>Status</th>
+            <th>Risk</th><th>Compliance</th>
+            <th>Summary</th>
+          </tr></thead>
+          <tbody>${rows.length === 0 ? emptyRow(7) : rows.map(rowHistHTML).join("")}</tbody>
+        `;
+      }
+      function rowHistHTML(r) {
+        return `<tr>
+          <td><span class="num small">${r.completed_at ? formatDate(r.completed_at) : formatDate(r.created_at)}</span></td>
+          <td><div class="m-title">${escapeHTML(state.contractTitleById.get(r.contract_id) || "(deleted)")}</div>
+              <div class="m-sub num">${escapeHTML(r.contract_id?.slice(0,8) || "")}</div></td>
+          <td><span class="small">${escapeHTML(r.review_type || "—")}</span></td>
+          <td><span class="small">${escapeHTML(r.status || "—")}</span></td>
+          <td>${r.risk_score != null ? `<span class="num">${r.risk_score.toFixed?.(0) ?? r.risk_score}</span>` : "—"}</td>
+          <td>${r.compliance_score != null ? `<span class="num">${r.compliance_score.toFixed?.(0) ?? r.compliance_score}</span>` : "—"}</td>
+          <td><div class="small">${escapeHTML(r.summary || "—")}</div></td>
+        </tr>`;
+      }
+
+      // ------------------ Helpers ------------------
+      function emptyRow(cols) {
+        return `<tr><td colspan="${cols}" style="padding:24px;text-align:center;color:var(--muted);">
+          No rows to show — try clearing the filter or upload a contract.
+        </td></tr>`;
+      }
+      function escapeHTML(s) {
+        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[c]));
+      }
+      function severityOrder(sev) {
+        return ({ critical: 5, high: 4, medium: 3, low: 2, info: 1 })[sev] || 0;
+      }
+      function priorityOrder(p) {
+        return ({ urgent: 4, high: 3, medium: 2, low: 1 })[p] || 0;
+      }
+      function formatCurrency(n, cur) {
+        try {
+          return new Intl.NumberFormat(undefined, { style: "currency", currency: cur || "USD", maximumFractionDigits: 0 }).format(n);
+        } catch { return n + " " + (cur || ""); }
+      }
+      function formatDate(iso) {
+        try {
+          const d = new Date(iso);
+          return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+                 " · " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+        } catch { return iso.slice(0, 16); }
+      }
+    </script>
+  </body>
+</html>
+
+

@@ -1,0 +1,45 @@
+{
+  "name": "compliance-agent",
+  "description": "Runs standard-clause checklists against the contract, writes missing_clauses rows, and sets a compliance_score on the contract.",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "contract_id": { "type": "string" },
+      "doc_type": { "type": "string" },
+      "passed": { "type": "array", "items": { "type": "string" } },
+      "failed": { "type": "array", "items": { "type": "string" } },
+      "missing_clause_rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "clause_name": { "type": "string" },
+            "category": {
+              "type": "string",
+              "enum": ["liability", "ip", "confidentiality", "termination", "payment", "indemnification", "data_protection", "governance", "force_majeure", "other"]
+            },
+            "severity": { "type": "string", "enum": ["info", "low", "medium", "high", "critical"] },
+            "description": { "type": "string" },
+            "why_required": { "type": "string" },
+            "suggested_language": { "type": "string" }
+          },
+          "required": ["clause_name", "category", "severity", "why_required"]
+        }
+      },
+      "compliance_score": { "type": "number" }
+    },
+    "required": ["contract_id", "compliance_score", "missing_clause_rows"]
+  },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "contracts",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] },
+    { "resource_type": "datastore_table", "resource_name": "missing_clauses",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] },
+    { "resource_type": "folder", "resource_name": "/contracts",
+      "permission_ids": ["folder.read"] },
+    { "resource_type": "folder", "resource_name": "/knowledge",
+      "permission_ids": ["folder.read"] }
+  ] }
+}

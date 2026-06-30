@@ -1,0 +1,38 @@
+{
+  "name": "risk-agent",
+  "description": "Assigns a 0-100 risk score + risk_level (low/medium/high/critical) to the contract based on its terms and its compliance gaps.",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "contract_id": { "type": "string" },
+      "risk_score": { "type": "number", "minimum": 0, "maximum": 100 },
+      "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+      "risk_factors": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "factor": { "type": "string" },
+            "weight": { "type": "number" },
+            "evidence": { "type": "string" }
+          },
+          "required": ["factor", "weight"]
+        }
+      },
+      "summary": { "type": "string" }
+    },
+    "required": ["contract_id", "risk_score", "risk_level", "risk_factors"]
+  },
+  "permissions": { "grants": [
+    { "resource_type": "datastore_table", "resource_name": "contracts",
+      "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"] },
+    { "resource_type": "datastore_table", "resource_name": "missing_clauses",
+      "permission_ids": ["datastore.table.read", "datastore.record.read"] },
+    { "resource_type": "folder", "resource_name": "/contracts",
+      "permission_ids": ["folder.read"] },
+    { "resource_type": "folder", "resource_name": "/knowledge",
+      "permission_ids": ["folder.read"] }
+  ] }
+}
